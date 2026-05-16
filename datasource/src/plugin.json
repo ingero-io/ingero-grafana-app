@@ -1,14 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "Ingero",
+  "name": "Ingero GPU",
   "id": "ingero-gpu-datasource",
   "metrics": true,
   "backend": true,
   "executable": "gpx_ingero_gpu",
   "info": {
-    "description": "Native datasource for Ingero Echo. Query the Echo DuckDB store via SQL, invoke MCP tools as panel data, and surface the anomaly stream with structured rows.",
-    "keywords": ["nvidia", "gpu", "cuda", "nccl", "ebpf", "ingero", "echo", "mcp"],
+    "description": "Datasource for NVIDIA GPU telemetry from the Ingero Echo API. Run SQL against the GPU event store, call MCP tools as panel data, and stream detected anomalies into Grafana panels and alerts.",
+    "keywords": ["nvidia", "gpu", "cuda", "nccl", "monitoring", "observability", "sql", "mcp", "ingero", "echo"],
     "author": {
       "name": "Ingero",
       "url": "https://github.com/ingero-io"

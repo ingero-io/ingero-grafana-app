@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "app",
-  "name": "Ingero",
+  "name": "Ingero GPU Observability",
   "id": "ingero-gpu-app",
   "info": {
-    "description": "Reference dashboards, alert rules, and a native datasource for Ingero GPU observability. NCCL straggler triage, CUDA op profiling, memcpy bandwidth, memory fragmentation, throttle history.",
-    "keywords": ["nvidia", "gpu", "cuda", "nccl", "ebpf", "memcpy", "memory", "throttle", "pytorch", "ingero"],
+    "description": "NVIDIA GPU monitoring and observability for Grafana. Bundles dashboards and alert rules for NCCL straggler detection in distributed PyTorch training, CUDA operation profiling, GPU memory fragmentation, and thermal throttling, plus a native datasource for the Ingero Echo API.",
+    "keywords": ["nvidia", "gpu", "cuda", "nccl", "pytorch", "monitoring", "observability", "distributed-training", "gpu-monitoring", "kubernetes", "ebpf", "ingero"],
     "author": {
       "name": "Ingero",
       "url": "https://github.com/ingero-io"
