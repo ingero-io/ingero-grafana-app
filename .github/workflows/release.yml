@@ -85,7 +85,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: grafana/plugin-actions/build-plugin@build-plugin/v1.0.2
+      - uses: grafana/plugin-actions/build-plugin@build-plugin/v1.2.0
         # To enable signing, store the access policy token as a repo
         # secret named GRAFANA_ACCESS_POLICY_TOKEN and uncomment:
         # with:
