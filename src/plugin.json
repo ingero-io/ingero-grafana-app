@@ -1,0 +1,99 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "app",
+  "name": "Ingero",
+  "id": "ingero-gpu-app",
+  "info": {
+    "description": "Reference dashboards, alert rules, and a native datasource for Ingero GPU observability. NCCL straggler triage, CUDA op profiling, memcpy bandwidth, memory fragmentation, throttle history.",
+    "keywords": ["nvidia", "gpu", "cuda", "nccl", "ebpf", "memcpy", "memory", "throttle", "pytorch", "ingero"],
+    "author": {
+      "name": "Ingero",
+      "url": "https://github.com/ingero-io"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/ingero-io/ingero-grafana-app"
+      },
+      {
+        "name": "Ingero agent",
+        "url": "https://github.com/ingero-io/ingero"
+      },
+      {
+        "name": "Ingero Fleet",
+        "url": "https://github.com/ingero-io/ingero-fleet"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "includes": [
+    {
+      "type": "page",
+      "icon": "cog",
+      "name": "Configuration",
+      "path": "/plugins/%PLUGIN_ID%",
+      "role": "Admin",
+      "addToNav": true
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Trace Overview (single host)",
+      "path": "dashboards/single-node-01-trace-overview.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "CUDA Op Profiler (single host)",
+      "path": "dashboards/single-node-02-cuda-op-profiler.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Data Movement (single host)",
+      "path": "dashboards/single-node-03-data-movement.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Memory and Throttle (single host)",
+      "path": "dashboards/single-node-04-memory-throttle.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Cluster Overview",
+      "path": "dashboards/cluster-01-overview.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "NCCL Stragglers",
+      "path": "dashboards/cluster-02-nccl-stragglers.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Memcpy Bandwidth",
+      "path": "dashboards/cluster-03-memcpy-bandwidth.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "GPU Memory Fragmentation",
+      "path": "dashboards/cluster-04-memory-fragmentation.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "Per-Node GPU Drill-Down",
+      "path": "dashboards/cluster-05-per-node-drilldown.json"
+    },
+    {
+      "type": "dashboard",
+      "name": "Ingero Fleet Pipeline Health",
+      "path": "dashboards/fleet-pipeline-health.json"
+    }
+  ],
+  "dependencies": {
+    "grafanaDependency": ">=12.3.0",
+    "plugins": []
+  }
+}

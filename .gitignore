@@ -1,0 +1,76 @@
+# Python bytecode caches (from the alert-rule unit tests)
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / build outputs
+lib-cov
+artifacts/
+work/
+ci/
+
+# e2e test outputs
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+.eslintcache
+
+# Node / TS
+node_modules/
+dist/
+coverage/
+*.log
+.npm/
+.yarn/
+.pnpm-store/
+
+# Grafana plugin build outputs (root-level dist/plugin only; do NOT
+# match datasource/pkg/plugin which is the Go backend package).
+/plugin/
+*.zip
+*.tar.gz
+.grafana/
+
+# Go (datasource backend)
+bin/
+vendor/
+*.test
+*.out
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.*

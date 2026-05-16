@@ -1,0 +1,474 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Multi-node NCCL straggler dashboard. Top-N nodes by collective byte volume, per-op_type bandwidth (ncclAllReduce, ncclAllGather, ncclReduceScatter, ncclBcast, ncclSend/Recv), barrier-event ratio, per-rank rates. Find which node is dragging down distributed PyTorch / FSDP / DeepSpeed training. eBPF uprobes on libnccl.so.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total ncclAllReduce (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(gpu_nccl_collective_count{op_type=\"ncclAllReduce\",instance=~\"$instance\"}[1h]))",
+          "legendFormat": "events"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Total NCCL bytes (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(gpu_nccl_collective_bytes_total{instance=~\"$instance\"}[1h]))",
+          "legendFormat": "bytes"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "NCCL processes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_nccl_processes_total{instance=~\"$instance\"})",
+          "legendFormat": "PIDs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Distinct libnccl versions",
+      "description": "Count of unique libnccl_version labels seen across the cluster. v0.14.2 multi-libnccl-attach makes this work even when each PyTorch venv ships its own NCCL.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (libnccl_version) (gpu_nccl_process_loaded{instance=~\"$instance\"}))",
+          "legendFormat": "versions"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Events by collective op type (1h)",
+      "description": "Surfaces which op dominates: allreduce-heavy = data-parallel; allgather/reducescatter = ZeRO/FSDP; broadcast = shape-sync.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (op_type) (increase(gpu_nccl_collective_count{instance=~\"$instance\"}[1h]))",
+          "legendFormat": "{{op_type}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Bytes by collective op type (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (op_type) (increase(gpu_nccl_collective_bytes_total{instance=~\"$instance\"}[1h]))",
+          "legendFormat": "{{op_type}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Collective rate per op_type (per node)",
+      "description": "Per-instance rate. A single instance pulling away = candidate straggler.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "rate(gpu_nccl_collective_count{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} / {{op_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "NCCL bandwidth per op_type",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (op_type) (rate(gpu_nccl_collective_bytes_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{op_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Barrier-event ratio per op_type",
+      "description": "barrier_events / collective_count. High ratio = collective is acting as a sync point (often a sign of imbalanced ranks).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (op_type) (rate(gpu_nccl_collective_barrier_events{instance=~\"$instance\"}[5m])) / sum by (op_type) (rate(gpu_nccl_collective_count{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{op_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top 10 nodes by NCCL byte volume (1h)",
+      "description": "Drill into the noisiest nodes from here. High-traffic node + high-bandwidth shape = candidate straggler.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (instance) (increase(gpu_nccl_collective_bytes_total{instance=~\"$instance\"}[1h])))",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "id": 200,
+      "type": "table",
+      "title": "Detected stragglers (MCP: fleet.cluster.find_stragglers)",
+      "description": "Echo's find_stragglers tool returns the current straggler set with severity. Powered by the same peer-relative MAD detector that feeds the ingero_fleet_mad Prometheus metric.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "queryType": "tool",
+          "tool": "fleet.cluster.find_stragglers",
+          "toolArgs": {}
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "30s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "nvidia",
+    "gpu",
+    "nccl",
+    "stragglers",
+    "allreduce",
+    "distributed",
+    "pytorch",
+    "fsdp",
+    "multi-node",
+    "ingero"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_nccl_collective_count, instance)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "NCCL Stragglers: distributed training slowdown finder (multi-GPU)",
+  "uid": "ingero-cluster-nccl-stragglers",
+  "version": 1,
+  "weekStart": ""
+}

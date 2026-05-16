@@ -1,0 +1,545 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Multi-node NVIDIA GPU cluster dashboard. One-glance health: active GPUs, NCCL collective rates by op_type, memcpy bandwidth by direction (h2d/d2h/d2d), throttle event counters, aggregate GPU memory. eBPF-collected agent metrics aggregated across N nodes. Pair with cluster-wide Prometheus + Ingero Fleet collector.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active GPUs",
+      "description": "Distinct gpu_uuid currently reporting memory metrics.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (gpu_uuid) (gpu_memory_total_bytes{instance=~\"$instance\"}))",
+          "legendFormat": "GPUs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Active NCCL processes",
+      "description": "Sum of gpu_nccl_processes_total across nodes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_nccl_processes_total{instance=~\"$instance\"})",
+          "legendFormat": "PIDs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cluster GPU memory used",
+      "description": "Aggregate used / total across all GPUs in the selected scope.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_memory_used_bytes{instance=~\"$instance\"}) / sum(gpu_memory_total_bytes{instance=~\"$instance\"})",
+          "legendFormat": "used"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.7
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Throttle events / 5m",
+      "description": "Sum of all throttle rising-edge events over the last 5 minutes (edge counters).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(gpu_throttle_power_event_total{instance=~\"$instance\"}[5m]) + increase(gpu_throttle_thermal_event_total{instance=~\"$instance\"}[5m]) + increase(gpu_throttle_sw_event_total{instance=~\"$instance\"}[5m]) + increase(gpu_throttle_hw_event_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "events"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Memcpy throughput (last 5m)",
+      "description": "Sum of all per-direction bytes_total rate; coarse but useful aggregate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gpu_memcpy_bytes_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "bytes/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "NCCL collective rate",
+      "description": "Total ncclCollective events/sec across op types (F2 counters).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gpu_nccl_collective_count{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "events/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1
+        }
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "GPU memory utilization per node",
+      "description": "used / total per (instance, gpu_uuid). One series per GPU.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_memory_used_bytes{instance=~\"$instance\"} / gpu_memory_total_bytes{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}} / {{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "NCCL collective rate by op type",
+      "description": "F2: per-op_type running counter, rate over time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (op_type) (rate(gpu_nccl_collective_count{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{op_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memcpy bandwidth by direction",
+      "description": "rate(gpu_memcpy_bytes_total) per direction. h2d / d2h dominance signals data-pipeline bottlenecks.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (direction) (rate(gpu_memcpy_bytes_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{direction}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throttle event rate by bucket",
+      "description": "L: rising-edge counters. Spikes indicate the GPU just became throttled. Sub-poll bursts still missed by design.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "rate(gpu_throttle_power_event_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "power"
+        },
+        {
+          "expr": "rate(gpu_throttle_thermal_event_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "thermal"
+        },
+        {
+          "expr": "rate(gpu_throttle_sw_event_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "sw"
+        },
+        {
+          "expr": "rate(gpu_throttle_hw_event_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "hw"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "NCCL-loaded processes (latest scrape)",
+      "description": "From gpu_nccl_process_loaded gauge. PID + libnccl version observed by the discovery scanner.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_nccl_process_loaded{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}} pid={{pid}} comm={{comm}} libnccl={{libnccl_version}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "Value": true
+            }
+          }
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "id": 200,
+      "type": "table",
+      "title": "Cluster summary (MCP: fleet.cluster.summary)",
+      "description": "Live cluster overview emitted by Echo's fleet.cluster.summary MCP tool. Requires an Ingero datasource configured via $ingero_source; renders empty otherwise.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "queryType": "tool",
+          "tool": "fleet.cluster.summary",
+          "toolArgs": {}
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "30s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "nvidia",
+    "gpu",
+    "cuda",
+    "nccl",
+    "memcpy",
+    "ebpf",
+    "kubernetes",
+    "multi-node",
+    "cluster",
+    "ingero"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_memory_total_bytes, instance)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "label": "Node"
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "timezone": "browser",
+  "title": "NVIDIA GPU Cluster Overview: NCCL, memcpy, throttle (multi-node)",
+  "uid": "ingero-cluster-overview",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,577 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Single-host NVIDIA GPU resource state dashboard. Memory used/free/total/fragmentation, top PIDs by allocation, throttle bitmask + rising-edge event counters (power/thermal/sw/hw), experimental memfrag IOCTL counter. Why is my GPU running hot, throttled, or full?",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Memory used %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_memory_used_bytes{gpu_uuid=~\"$gpu_uuid\"}) / sum(gpu_memory_total_bytes{gpu_uuid=~\"$gpu_uuid\"})",
+          "legendFormat": "used"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.7
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Free memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_memory_free_bytes{gpu_uuid=~\"$gpu_uuid\"})",
+          "legendFormat": "free"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Fragmentation estimate",
+      "description": "v0.14 NVML heuristic. 0 = unfragmented, 1 = fully fragmented. Average across selected GPUs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "avg(gpu_memory_fragmentation_estimate{gpu_uuid=~\"$gpu_uuid\"})",
+          "legendFormat": "fragmentation"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 0.6
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Local PIDs holding memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (pid) (gpu_memory_process_allocated_bytes{gpu_uuid=~\"$gpu_uuid\"}))",
+          "legendFormat": "PIDs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory used vs total per GPU",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_memory_used_bytes{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "used / {{gpu_uuid}}"
+        },
+        {
+          "expr": "gpu_memory_total_bytes{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "total / {{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fragmentation estimate over time",
+      "description": "Tracks 1 - (largest-free-block / total-free) per GPU. Spikes correlate with alloc churn (DataLoader rebuilds, optimizer state shuffles).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_memory_fragmentation_estimate{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "{{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top processes by allocated GPU memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_memory_process_allocated_bytes{gpu_uuid=~\"$gpu_uuid\"})",
+          "legendFormat": "pid={{pid}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "IOCTL events by cmd (top 5, experimental)",
+      "description": "Empty unless the agent runs with --enable-experimental-kprobes AND host is on internal/kprobe.DefaultAllowlist. Decode cmd values against open-gpu-kernel-modules nv-ioctl-numbers.h.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(5, sum by (cmd) (rate(gpu_memfrag_ioctl_event_total[1m])))",
+          "legendFormat": "cmd={{cmd}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Throttle active right now?",
+      "description": "Sum across all 4 buckets. Each bucket gauge = 1 when active. >0 means GPU is throttled in at least one dimension.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(gpu_throttle_power_active{gpu_uuid=~\"$gpu_uuid\"} + gpu_throttle_thermal_active{gpu_uuid=~\"$gpu_uuid\"} + gpu_throttle_sw_active{gpu_uuid=~\"$gpu_uuid\"} + gpu_throttle_hw_active{gpu_uuid=~\"$gpu_uuid\"})",
+          "legendFormat": "active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Power events / 5m",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "increase(gpu_throttle_power_event_total[5m])",
+          "legendFormat": "events"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Thermal events / 5m",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "increase(gpu_throttle_thermal_event_total[5m])",
+          "legendFormat": "events"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "HW events / 5m",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "increase(gpu_throttle_hw_event_total[5m])",
+          "legendFormat": "events"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throttle bitmask per GPU",
+      "description": "Per-bucket gauge: 1=active. Concurrent active buckets = compound throttle (e.g. power + thermal during sustained load). Polled every --throttle-poll-interval (default 5s); sub-poll bursts may be missed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_throttle_power_active{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "power / {{gpu_uuid}}"
+        },
+        {
+          "expr": "gpu_throttle_thermal_active{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "thermal / {{gpu_uuid}}"
+        },
+        {
+          "expr": "gpu_throttle_sw_active{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "sw / {{gpu_uuid}}"
+        },
+        {
+          "expr": "gpu_throttle_hw_active{gpu_uuid=~\"$gpu_uuid\"}",
+          "legendFormat": "hw / {{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throttle event-edge rate per bucket",
+      "description": "Rising-edge counters layered on the existing nvidia-smi poll. Each transition from 'not throttled' to 'throttled' increments the bucket counter once. Sub-poll bursts still missed by design (same caveat as the gauges above).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "rate(gpu_throttle_power_event_total[1m])",
+          "legendFormat": "power"
+        },
+        {
+          "expr": "rate(gpu_throttle_thermal_event_total[1m])",
+          "legendFormat": "thermal"
+        },
+        {
+          "expr": "rate(gpu_throttle_sw_event_total[1m])",
+          "legendFormat": "sw"
+        },
+        {
+          "expr": "rate(gpu_throttle_hw_event_total[1m])",
+          "legendFormat": "hw"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      }
+    }
+  ],
+  "refresh": "10s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "nvidia",
+    "gpu",
+    "memory",
+    "throttle",
+    "thermal",
+    "oom",
+    "fragmentation",
+    "ebpf",
+    "single-node",
+    "ingero"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "gpu_uuid",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_memory_total_bytes, gpu_uuid)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "label": "GPU"
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "GPU Memory & Throttle: OOM, thermal, power debug (single host)",
+  "uid": "ingero-single-node-mem-throttle",
+  "version": 1,
+  "weekStart": ""
+}
