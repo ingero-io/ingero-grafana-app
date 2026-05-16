@@ -1,0 +1,372 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Reference dashboard. Single multi-cluster overlay via cluster_id template variable. Used by examples/demo (auto-mounted) and examples/lambda-e2e (manual import). Customize panel layout and add your own panels.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Fleet peer-relative median (healthy > 0.85)",
+      "targets": [
+        {
+          "expr": "ingero_fleet_median{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fleet MAD (spikes indicate peer divergence)",
+      "targets": [
+        {
+          "expr": "ingero_fleet_mad{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}}"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Active nodes reporting",
+      "targets": [
+        {
+          "expr": "ingero_fleet_active_nodes{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}}"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Coverage quorum ok (1=no, 0=ok)",
+      "targets": [
+        {
+          "expr": "ingero_fleet_coverage_low{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}}"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Straggler-sink events received (per node)",
+      "targets": [
+        {
+          "expr": "sum by (cluster_id, node) (rate(ingero_sink_events_total{cluster_id=~\"$cluster_id\"}[1m]))",
+          "legendFormat": "{{cluster_id}} {{node}}"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sink parse errors (should be 0)",
+      "targets": [
+        {
+          "expr": "ingero_sink_parse_errors_total{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}} {{node}}"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sink connected (1=up)",
+      "targets": [
+        {
+          "expr": "ingero_sink_connected{cluster_id=~\"$cluster_id\"}",
+          "legendFormat": "{{cluster_id}} {{node}}"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "id": 100,
+      "type": "stat",
+      "title": "Cost-of-stragglers ($/min)",
+      "description": "Per-minute $ rate of GPU time blocked by detected stragglers, summed across the fleet. Joins ingero_node_straggler_event with ingero_node_world_size and the gpu_rates.yaml table via the ingero:event_cost_rate_1m recording rule.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(ingero:event_cost_rate_1m)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1.0,
+                "color": "yellow"
+              },
+              {
+                "value": 10.0,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "Cost-of-stragglers trend",
+      "description": "Per-minute $ rate over the dashboard window. Use to spot persistent slow ranks vs. one-off blips.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 26,
+        "w": 16,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(ingero:event_cost_rate_1m)",
+          "refId": "A",
+          "legendFormat": "$/min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "showPoints": "never"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 200,
+      "type": "table",
+      "title": "Recent anomalies (last 1h)",
+      "description": "Stream of recent anomalies from the Echo store (fleet.cluster.anomaly_list). Default window 1h; edit the panel to scope a different time window or filter severity.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "queryType": "anomaly",
+          "timeWindow": "1h",
+          "severityFilter": "any",
+          "limit": 100
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "15s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "ingero",
+    "fleet",
+    "gpu",
+    "pipeline"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "cluster_id",
+        "type": "query",
+        "label": "Cluster",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "query": "label_values(ingero_fleet_median, cluster_id)",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Ingero Fleet: Pipeline Health",
+  "uid": "ingero-fleet-pipeline-health",
+  "version": 2,
+  "weekStart": ""
+}

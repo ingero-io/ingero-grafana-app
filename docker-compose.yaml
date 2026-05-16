@@ -1,0 +1,31 @@
+services:
+  grafana:
+    extends:
+      file: .config/docker-compose-base.yaml
+      service: grafana
+    # The plugin loads dashboards from /var/lib/grafana/plugins (via
+    # the base compose's existing volume mount), and Grafana itself
+    # provisions datasources + alerts from /etc/grafana/provisioning
+    # (also already mounted). The two fake-Echo services below give
+    # the e2e Playwright suite two real HTTP endpoints to exercise
+    # the multi-instance + per-query-type behaviour without standing
+    # up a real Ingero Fleet.
+    depends_on:
+      - fake-echo-a
+      - fake-echo-b
+
+  fake-echo-a:
+    build:
+      context: ./tests/fake-echo
+    container_name: fake-echo-a
+    command: ["--addr", "0.0.0.0:8081", "--bearer", "dev-bearer", "--label", "echo-a"]
+    expose:
+      - "8081"
+
+  fake-echo-b:
+    build:
+      context: ./tests/fake-echo
+    container_name: fake-echo-b
+    command: ["--addr", "0.0.0.0:8081", "--bearer", "dev-bearer", "--label", "echo-b"]
+    expose:
+      - "8081"

@@ -1,0 +1,214 @@
+{
+  "__inputs": [],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "ingero-gpu-datasource",
+      "name": "Ingero",
+      "version": "0.1.0"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.3.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Reference dashboard for the Ingero Echo datasource. Demonstrates the SQL endpoint with three panels: total event count, recent-event tail, and per-host event distribution. Use as a starting point for SQL-driven panels against the DuckDB-backed events table.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "refId": "A",
+          "sql": "SELECT COUNT(*) AS total_events FROM events"
+        }
+      ],
+      "title": "Total events",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 18,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "refId": "A",
+          "sql": "SELECT ts, metric_name, host_attr, cluster_id FROM events ORDER BY ts DESC LIMIT 50"
+        }
+      ],
+      "title": "Recent events (most-recent 50)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "refId": "A",
+          "sql": "SELECT host_attr, COUNT(*) AS events FROM events GROUP BY host_attr ORDER BY events DESC LIMIT 25"
+        }
+      ],
+      "title": "Events per host",
+      "type": "table"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "ingero",
+    "echo",
+    "sql",
+    "reference"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Ingero Echo SQL (reference)",
+  "uid": "ingero-echo-sql-reference",
+  "version": 1,
+  "weekStart": ""
+}

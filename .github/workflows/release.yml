@@ -1,0 +1,106 @@
+# Tag-driven release pipeline.
+#
+# On `v*` tag push:
+#   1. `gates` job verifies the repo is public and the CHANGELOG has
+#      a matching [<version>] section. A failed assertion aborts the
+#      release before any signing.
+#   2. `release` job builds + signs the plugin bundle via Grafana's
+#      plugin-actions, then publishes it as a GitHub Release attaching
+#      the matching CHANGELOG section as release notes.
+#
+# Prereleases (`-rcN`, `-betaN`, `-alphaN`) are auto-flagged so they
+# don't replace the "latest" pointer on GitHub.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: read-all
+
+jobs:
+  gates:
+    name: Release-time invariants
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - id: tag
+        name: Extract tag
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#v}"
+          case "$tag" in
+            *-rc*|*-beta*|*-alpha*) prerelease=true ;;
+            *) prerelease=false ;;
+          esac
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "prerelease=$prerelease" >> $GITHUB_OUTPUT
+          echo "Tag $tag (version $version, prerelease=$prerelease)"
+
+      - name: Verify repo is public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          visibility=$(gh repo view --json visibility -q .visibility)
+          if [ "$visibility" != "PUBLIC" ]; then
+            echo "Repo visibility is $visibility; refusing to release a private plugin."
+            exit 1
+          fi
+          echo "Repo is public."
+
+      - name: CHANGELOG asserts
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, sys, pathlib
+          v = os.environ['VERSION']
+          text = pathlib.Path('CHANGELOG.md').read_text()
+          if not re.search(rf'^## \[{re.escape(v)}\]', text, re.MULTILINE):
+              sys.exit(f'CHANGELOG missing entry for {v} (expected `## [{v}]`)')
+          print(f'CHANGELOG ok for v{v}')
+          PY
+
+  release:
+    name: Build + sign + publish
+    needs: gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: grafana/plugin-actions/build-plugin@build-plugin/v1.0.2
+        # To enable signing, store the access policy token as a repo
+        # secret named GRAFANA_ACCESS_POLICY_TOKEN and uncomment:
+        # with:
+        #   policy_token: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
+
+      - name: Extract release notes from CHANGELOG
+        env:
+          VERSION: ${{ needs.gates.outputs.version }}
+        run: |
+          python3 - <<'PY' > release-notes.md
+          import os, re, pathlib
+          v = os.environ['VERSION']
+          text = pathlib.Path('CHANGELOG.md').read_text()
+          m = re.search(rf'^## \[{re.escape(v)}\][^\n]*\n(.*?)(?=^## \[|\Z)', text, re.MULTILINE | re.DOTALL)
+          print((m.group(1) if m else '').strip())
+          PY
+          echo "--- release notes ---"
+          cat release-notes.md

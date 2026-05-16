@@ -1,0 +1,213 @@
+apiVersion: 1
+# Ingero GPU starter alert rules. Drop this file into a Grafana
+# provisioning directory and replace the ${DS_PROMETHEUS} placeholder
+# with the UID of your Prometheus datasource (the one scraping the
+# Ingero agent's :9090 endpoint, and for the cluster-only rules, the
+# fleet/Echo collector's :9090). All five rules are pure Prometheus
+# queries in v0.1.0; MCP-tool-as-alerting-query is deferred to v0.2.
+groups:
+  - orgId: 1
+    name: ingero-gpu
+    folder: Ingero
+    interval: 1m
+    rules:
+
+      # 1. NCCL straggler suspected (cluster only)
+      #
+      # Fires when at least one node in a 3+ node cluster has an
+      # AllReduce rate that is < 50% of the cluster average for
+      # 5 minutes. Captures the slow-laggard case: the laggard is
+      # stuck at the NCCL barrier while fast peers spin. Does NOT
+      # fire on a fast outlier (one node faster than average).
+      # Single-node and 2-node-both-degraded clusters are degenerate
+      # baselines that this rule deliberately ignores.
+      - uid: ingero-nccl-straggler-suspected
+        title: NCCL straggler suspected
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: ${DS_PROMETHEUS}
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              expr: |
+                (count(rate(gpu_nccl_collective_count{op_type="ncclAllReduce"}[5m])) >= 3)
+                  and
+                (
+                  min by (instance) (rate(gpu_nccl_collective_count{op_type="ncclAllReduce"}[5m]))
+                  / on() group_left()
+                  avg(rate(gpu_nccl_collective_count{op_type="ncclAllReduce"}[5m]))
+                  < 0.5
+                )
+              instant: true
+        for: 5m
+        labels:
+          severity: warning
+          source: ingero
+          subsystem: nccl
+        annotations:
+          summary: 'Possible NCCL straggler: node {{ $labels.instance }} AllReduce rate < 50% of cluster avg'
+          description: |
+            Node {{ $labels.instance }} is processing far fewer
+            ncclAllReduce events than the cluster average for the
+            past 5 minutes. Stragglers manifest as low-rate nodes
+            because the laggard is stuck at the NCCL barrier; the
+            faster peers are spinning. Investigate this node first:
+            CPU contention, OOM pressure, throttling, slow data
+            loader, or a hardware fault.
+          runbook_url: 'https://github.com/ingero-io/ingero-grafana-app/blob/main/docs/runbooks/nccl-straggler.md'
+        isPaused: false
+
+      # 2. GPU OOM imminent (host or cluster)
+      #
+      # Fires when memory utilisation is above 90% AND the
+      # fragmentation estimate is above 0.6 for 10 minutes. The
+      # AND of both signals catches the "OOM on a half-full GPU"
+      # case where total used is moderate but the largest free
+      # block can no longer satisfy allocator demand. Pure
+      # Prometheus on the agent's gpu_memory_* + gpu_memfrag_*
+      # series.
+      - uid: ingero-gpu-oom-imminent
+        title: GPU OOM imminent
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: ${DS_PROMETHEUS}
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              expr: |
+                (gpu_memory_used_bytes / gpu_memory_total_bytes > 0.9)
+                  and
+                (gpu_memfrag_estimate > 0.6)
+              instant: true
+        for: 10m
+        labels:
+          severity: critical
+          source: ingero
+          subsystem: gpu-memory
+        annotations:
+          summary: 'GPU OOM imminent on {{ $labels.instance }} / GPU {{ $labels.gpu }}'
+          description: |
+            Memory utilisation on this GPU is above 90% and the
+            fragmentation estimate is above 0.6. Allocator pressure
+            is high: the next sizeable cudaMalloc may OOM even
+            though some memory remains free. Drain workloads or
+            restart the offending process.
+        isPaused: false
+
+      # 3. GPU throttle sustained (host or cluster)
+      #
+      # Fires when any throttle cause flag stays at 1 for 5 minutes.
+      # Thermal, power, and hw_slowdown are the three causes that
+      # the agent records as "active"; a transient bounce is normal
+      # under load, but sustained throttle is performance-affecting.
+      - uid: ingero-gpu-throttle-sustained
+        title: GPU throttle sustained
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: ${DS_PROMETHEUS}
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              expr: |
+                gpu_throttle_active{cause=~"thermal|power|hw_slowdown"} == 1
+              instant: true
+        for: 5m
+        labels:
+          severity: warning
+          source: ingero
+          subsystem: gpu-throttle
+        annotations:
+          summary: 'Sustained {{ $labels.cause }} throttle on {{ $labels.instance }} / GPU {{ $labels.gpu }}'
+          description: |
+            The {{ $labels.cause }} throttle cause has been active
+            for at least 5 minutes. This degrades effective TFLOPS
+            and can amplify NCCL straggler effects. Check cooling,
+            power delivery, or the driver's slowdown reason.
+        isPaused: false
+
+      # 4. Peer-relative MAD spike (cluster only)
+      #
+      # The ingero_fleet_mad_ratio metric is Echo's median-absolute-
+      # deviation tracker for per-node behaviour. A ratio above 3
+      # sustained for 5 minutes indicates one or more nodes have
+      # drifted meaningfully away from the cluster's behavioural
+      # baseline.
+      - uid: ingero-fleet-mad-spike
+        title: Peer-relative MAD spike
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: ${DS_PROMETHEUS}
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              expr: |
+                ingero_fleet_mad_ratio > 3
+              instant: true
+        for: 5m
+        labels:
+          severity: warning
+          source: ingero
+          subsystem: fleet
+        annotations:
+          summary: 'Peer-relative MAD ratio > 3 on {{ $labels.instance }}'
+          description: |
+            The fleet's MAD-based deviation tracker reports a
+            ratio above 3 for at least 5 minutes. One or more
+            nodes have drifted away from the cluster baseline.
+            Open the cluster overview dashboard and drill into
+            the outliers.
+        isPaused: false
+
+      # 5. Echo sink connection lost (cluster only)
+      #
+      # The fleet collector's `ingero_fleet_sink_connected` metric
+      # is the operator's heartbeat for the OTLP sink wiring. A
+      # value of 0 sustained for 2 minutes means agents are
+      # producing OTLP but the collector cannot reach the
+      # downstream sink; this stalls every Echo-driven panel + the
+      # MCP tools that depend on Echo's DuckDB store.
+      - uid: ingero-fleet-sink-lost
+        title: Echo sink connection lost
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: ${DS_PROMETHEUS}
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              refId: A
+              expr: |
+                ingero_fleet_sink_connected == 0
+              instant: true
+        for: 2m
+        labels:
+          severity: critical
+          source: ingero
+          subsystem: fleet
+        annotations:
+          summary: 'Echo sink not connected on {{ $labels.instance }}'
+          description: |
+            The fleet collector reports its OTLP sink is not
+            connected. Agents may still be emitting metrics, but
+            Echo's store is not receiving them and downstream
+            panels + MCP tools will go stale. Check the sink
+            endpoint, credentials, and collector logs.
+        isPaused: false

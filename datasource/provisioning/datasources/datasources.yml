@@ -1,0 +1,30 @@
+apiVersion: 1
+
+# Local-dev datasource provisioning. The plugin SDK loads this on
+# Grafana startup (when running under `mage build && docker compose
+# up`) and registers an Ingero datasource pointed at a locally-
+# running Echo. Production deployments configure the datasource via
+# the Grafana UI; this file is for the test loop only.
+datasources:
+  - name: 'Ingero (local Echo)'
+    type: 'ingero-gpu-datasource'
+    access: proxy
+    isDefault: false
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      # Echo's HTTP+JSON listener. The dev docker-compose binds
+      # 127.0.0.1:8081 to the Echo MCP+httpapi port. Change to
+      # https://... + drop insecureSkipVerify for any real
+      # environment.
+      endpoint: 'http://host.docker.internal:8081'
+      # Local-dev Echo usually runs with --insecure-no-tls; if you
+      # switch to a real cert with a self-signed CA, set this true.
+      insecureSkipVerify: false
+    secureJsonData:
+      # Paste the same bearer the local Echo was started with
+      # (--auth-token). For a "make demo" loop, mint with:
+      #   openssl rand -hex 32 > .bearer
+      # then export INGERO_BEARER and substitute via envsubst.
+      bearer: 'local-dev-bearer-replace-me'

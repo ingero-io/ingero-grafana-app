@@ -1,0 +1,425 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  gates:
+    name: Pre-merge security + provisioning gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Bearer-leak gate. Scoped to the plugin's actual log surfaces
+      # (grafana-plugin-sdk-go logger calls + frontend console.*).
+      # Fails the PR on any match outside _test files. The allowlist
+      # suffix _hash|_id|_configured|_warn|_warning prevents false
+      # positives on legitimate "logged the bearer hash" or "bearer
+      # not configured" patterns.
+      - name: Bearer-leak regex (Go backend)
+        run: |
+          set -euo pipefail
+          hits=$(grep -rnE 'logger\.(Debug|Info|Warn|Error|Trace)\([^)]*\b(bearer|token)\b' \
+              datasource/pkg/ \
+              | grep -vE '_test\.go|_hash|_id|_configured|_warn|_warning' || true)
+          extra=$(grep -rnE 'fmt\.(Errorf|Sprintf)\([^,)]*%[sv][^,)]*,[^)]*\b(bearer|token)\b' \
+              datasource/pkg/ \
+              | grep -vE '_test\.go|_hash|_id|_configured|_warn|_warning' || true)
+          if [ -n "$hits$extra" ]; then
+            echo "Raw bearer/token reference in a logger or error format call:"
+            printf '%s\n' "$hits"
+            printf '%s\n' "$extra"
+            exit 1
+          fi
+          echo "Bearer-leak backend gate green."
+
+      - name: Bearer-leak regex (frontend TS)
+        run: |
+          set -euo pipefail
+          hits=$(grep -rnE 'console\.(log|warn|error|debug|info)\([^)]*\b(bearer|token)\b' \
+              src/ datasource/src/ \
+              | grep -vE '\.test\.tsx?|_hash|_id|_configured' || true)
+          if [ -n "$hits" ]; then
+            echo "Raw bearer/token reference in a frontend console call:"
+            printf '%s\n' "$hits"
+            exit 1
+          fi
+          echo "Bearer-leak frontend gate green."
+
+      # The plugin backend must not do filesystem access or arbitrary
+      # network egress - only the configured Echo endpoint through the
+      # SDK HTTP client. This gate enforces that with a grep.
+      - name: Backend egress + filesystem lint
+        run: |
+          set -euo pipefail
+          forbidden='os\.(Open|Create|ReadFile|WriteFile|Remove)|ioutil\.(ReadFile|WriteFile|TempDir)|exec\.Command|os/exec|net\.Dial[^A-Za-z]|http\.Get\b|http\.Post\b'
+          hits=$(grep -rnE "$forbidden" datasource/pkg/ \
+              | grep -vE '_test\.go' || true)
+          if [ -n "$hits" ]; then
+            echo "Forbidden filesystem / network call in backend:"
+            printf '%s\n' "$hits"
+            exit 1
+          fi
+          echo "Backend egress lint green."
+
+      # The provisioned alert YAMLs must parse as valid YAML and
+      # carry the expected per-rule keys. The fires-correctly-on-
+      # synthetic-data check lives in tests/alerts/.
+      - name: Alerting YAML structural validation
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys, yaml, pathlib
+          required_rule_keys = {'uid', 'title', 'condition', 'data', 'for', 'labels', 'annotations'}
+          for path in pathlib.Path('provisioning/alerting').glob('*.yaml'):
+              doc = yaml.safe_load(path.read_text())
+              if not isinstance(doc, dict) or doc.get('apiVersion') != 1:
+                  print(f'{path}: apiVersion != 1'); sys.exit(1)
+              groups = doc.get('groups') or []
+              for g in groups:
+                  for r in g.get('rules', []):
+                      missing = required_rule_keys - set(r)
+                      if missing:
+                          print(f'{path}: rule {r.get("uid","?")} missing keys: {missing}')
+                          sys.exit(1)
+                      # The NCCL straggler rule has explicit guards
+                      # that must be preserved.
+                      if r.get('uid') == 'ingero-nccl-straggler-suspected':
+                          expr = r['data'][0]['model']['expr']
+                          if 'count(rate(' not in expr or '>= 3' not in expr:
+                              print(f'{path}: NCCL straggler rule lost the count>=3 guard')
+                              sys.exit(1)
+                          if '< 0.5' not in expr:
+                              print(f'{path}: NCCL straggler rule lost the min/avg<0.5 clause')
+                              sys.exit(1)
+          print('Alerting YAML structural gate green.')
+          PY
+
+      # Verify the NCCL straggler rule fires correctly across four
+      # named scenarios (1-node, 2-node-degraded, 3-node-laggard,
+      # 3-node-outlier). The harness re-implements the rule's logic
+      # and asserts fire / no-fire per scenario.
+      - name: Alert rule scenario tests
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -m unittest tests/alerts/test_nccl_straggler.py
+
+  datasource-backend:
+    name: Datasource Go backend (build + vet + test)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: datasource/go.mod
+          cache-dependency-path: datasource/go.sum
+      - name: Download modules
+        run: cd datasource && go mod download
+      - name: Vet
+        run: cd datasource && go vet ./...
+      - name: Test
+        run: cd datasource && go test -race -count=1 ./...
+
+  datasource-frontend:
+    name: Datasource TypeScript (typecheck + lint + test)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: datasource/package-lock.json
+      - name: Install
+        run: cd datasource && npm ci
+      - name: Typecheck
+        run: cd datasource && npm run typecheck
+      - name: Lint
+        run: cd datasource && npm run lint
+      - name: Test
+        run: cd datasource && npm run test:ci
+
+  build:
+    name: Build, lint and unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      plugin-id: ${{ steps.metadata.outputs.plugin-id }}
+      plugin-version: ${{ steps.metadata.outputs.plugin-version }}
+      has-e2e: ${{ steps.check-for-e2e.outputs.has-e2e }}
+      has-backend: ${{ steps.check-for-backend.outputs.has-backend }}
+    env:
+      GRAFANA_ACCESS_POLICY_TOKEN: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install datasource dependencies
+        # The root webpack config auto-discovers every src/module.ts(x)
+        # under the repo and bundles them as separate entries. That
+        # picks up datasource/src/module.ts, which needs its own
+        # node_modules (the imports-loader resolves grafana-public-path
+        # through the entry's local resolution paths). Without this
+        # step the build fails with "Can't resolve 'grafana-public-path'
+        # in '.../datasource/src'".
+        run: cd datasource && npm ci
+
+      - name: Check types
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:ci
+      - name: Build frontend
+        run: npm run build
+
+      # Backend lives at datasource/pkg/ (nested under the app
+      # plugin); the root has no Magefile.go. Build the backend
+      # binaries directly with go build into dist/datasource/ so
+      # the signed bundle ships them at the Grafana-expected path.
+      # The datasource-backend job above already covers vet + race
+      # tests; this step only produces the release binaries.
+      - name: Check for nested backend
+        id: check-for-backend
+        run: |
+          if [ -f "datasource/Magefile.go" ] || [ -f "datasource/pkg/main.go" ]; then
+            echo "has-backend=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Go environment
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: datasource/go.mod
+          cache-dependency-path: datasource/go.sum
+
+      - name: Build backend binaries (gpx_<plugin-id>_<os>_<arch>)
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dist/datasource
+          cd datasource
+          for os in linux darwin; do
+            for arch in amd64 arm64; do
+              out="../dist/datasource/gpx_ingero_gpu_${os}_${arch}"
+              echo "Building $out"
+              GOOS=$os GOARCH=$arch go build -trimpath -ldflags="-s -w" -o "$out" ./pkg
+            done
+          done
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" \
+            -o "../dist/datasource/gpx_ingero_gpu_windows_amd64.exe" ./pkg
+          ls -la ../dist/datasource/gpx_*
+
+      - name: Check for E2E
+        id: check-for-e2e
+        run: |
+          if [ -f "playwright.config.ts" ]
+          then
+            echo "has-e2e=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sign plugin
+        run: npm run sign
+        if: ${{ env.GRAFANA_ACCESS_POLICY_TOKEN != '' }}
+
+      - name: Get plugin metadata
+        id: metadata
+        run: |
+          sudo apt-get install jq
+
+          export GRAFANA_PLUGIN_ID=$(cat dist/plugin.json | jq -r .id)
+          export GRAFANA_PLUGIN_VERSION=$(cat dist/plugin.json | jq -r .info.version)
+          export GRAFANA_PLUGIN_ARTIFACT=${GRAFANA_PLUGIN_ID}-${GRAFANA_PLUGIN_VERSION}.zip
+
+          echo "plugin-id=${GRAFANA_PLUGIN_ID}" >> $GITHUB_OUTPUT
+          echo "plugin-version=${GRAFANA_PLUGIN_VERSION}" >> $GITHUB_OUTPUT
+          echo "archive=${GRAFANA_PLUGIN_ARTIFACT}" >> $GITHUB_OUTPUT
+
+      - name: Package plugin
+        id: package-plugin
+        run: |
+          mv dist ${PLUGIN_ID}
+          zip ${ARCHIVE} ${PLUGIN_ID} -r
+        env:
+          ARCHIVE: ${{ steps.metadata.outputs.archive }}
+          PLUGIN_ID: ${{ steps.metadata.outputs.plugin-id }}
+
+      - name: Check plugin.json
+        run: |
+          docker run --pull=always \
+            -v $PWD/${ARCHIVE}:/archive.zip \
+            grafana/plugin-validator-cli -analyzer=metadatavalid /archive.zip
+        env:
+          ARCHIVE: ${{ steps.metadata.outputs.archive }}
+
+      - name: Archive Build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.metadata.outputs.plugin-id }}-${{ steps.metadata.outputs.plugin-version }}
+          path: ${{ steps.metadata.outputs.plugin-id }}
+          retention-days: 5
+
+  resolve-versions:
+    name: Resolve e2e images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 3
+    needs: build
+    if: ${{ needs.build.outputs.has-e2e == 'true' }}
+    outputs:
+      matrix: ${{ steps.resolve-versions.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve Grafana E2E versions
+        id: resolve-versions
+        uses: grafana/plugin-actions/e2e-version@e2e-version/v2.0.0
+
+  playwright-tests:
+    needs: [resolve-versions, build]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        GRAFANA_IMAGE: ${{fromJson(needs.resolve-versions.outputs.matrix)}}
+    name: e2e test ${{ matrix.GRAFANA_IMAGE.name }}@${{ matrix.GRAFANA_IMAGE.VERSION }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download plugin
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          name: ${{ needs.build.outputs.plugin-id }}-${{ needs.build.outputs.plugin-version }}
+
+      - name: Execute permissions on binary
+        if: needs.build.outputs.has-backend == 'true'
+        # The backend binaries live at ./dist/datasource/gpx_*
+        # because the datasource is a sub-plugin nested under the
+        # app plugin.
+        run: |
+          chmod +x ./dist/datasource/gpx_*
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      - name: Start Grafana
+        run: |
+          docker compose pull
+          ANONYMOUS_AUTH_ENABLED=false DEVELOPMENT=false GRAFANA_VERSION=${{ matrix.GRAFANA_IMAGE.VERSION }} GRAFANA_IMAGE=${{ matrix.GRAFANA_IMAGE.NAME }} docker compose up -d
+
+      - name: Wait for grafana server
+        uses: grafana/plugin-actions/wait-for-grafana@wait-for-grafana/v1.0.2
+        with:
+          url: http://localhost:3000/login
+
+      - name: Install Playwright Browsers
+        run: npm exec playwright install chromium --with-deps
+
+      - name: Run Playwright tests
+        id: run-tests
+        run: npm run e2e
+
+      - name: Upload e2e test summary
+        uses: grafana/plugin-actions/playwright-gh-pages/upload-report-artifacts@upload-report-artifacts/v1.0.1
+        if: ${{ always() && !cancelled() }}
+        with:
+          upload-report: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          test-outcome: ${{ steps.run-tests.outcome }}
+
+      - name: Upload Playwright artifacts on failure
+        # Screenshots, traces, and the test-results folder Playwright
+        # writes to test-results/. Lets us replay the failed test
+        # without re-running CI to repro.
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-artifacts-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+      - name: Docker logs
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        run: |
+          docker logs ingero-gpu-app >& grafana-server.log
+          docker logs fake-echo-a >& fake-echo-a.log || true
+          docker logs fake-echo-b >& fake-echo-b.log || true
+
+      - name: Upload docker logs on failure
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-logs-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{ github.run_id }}
+          path: |
+            grafana-server.log
+            fake-echo-a.log
+            fake-echo-b.log
+          retention-days: 7
+
+      - name: Stop grafana docker
+        run: docker compose down
+
+      # Uncomment this step to upload the server log to Github artifacts. Remember Github artifacts are public on the Internet if the repository is public.
+      # - name: Upload server log
+      #   uses: actions/upload-artifact@v4
+      #   if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+      #   with:
+      #     name: ${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}-server-log
+      #     path: grafana-server.log
+      #     retention-days: 5
+
+  # publish-report job removed: it tried to push to a `gh-pages` branch
+  # that does not exist in this repo, failing on every run with a
+  # "Duplicate header: Authorization" error from the GitHub git remote.
+  # Playwright test results are already visible in the Actions UI; a
+  # hosted report site is overkill until v0.2. Re-enable by initialising
+  # an empty `gh-pages` branch and restoring the job block from history.

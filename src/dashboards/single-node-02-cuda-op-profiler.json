@@ -1,0 +1,424 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Single-host CUDA Runtime + Driver operation profiler. Per-op p50/p95/p99 latency from eBPF uprobes on libcudart and libcuda. Find your slowest kernel: top-10 slowest p99 table, per-op timeseries, op rate. Covers cudaMemcpy, cudaLaunchKernel, cuLaunchKernel, cuMemAlloc_v2, cuCtxSynchronize, cuda graphs, host tracepoints.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Distinct ops seen (window)",
+      "description": "How many distinct operation labels the agent has captured.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (source, operation) (gpu_cuda_operation_count_total{source=~\"$source\",operation=~\"$operation\"}))",
+          "legendFormat": "ops"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Total ops / sec",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gpu_cuda_operation_count_total{source=~\"$source\",operation=~\"$operation\"}[1m]))",
+          "legendFormat": "ops/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Slowest p99 (current)",
+      "description": "Worst p99 across all selected ops.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "max(gpu_cuda_operation_duration_microseconds{percentile=\"p99\",source=~\"$source\",operation=~\"$operation\"})",
+          "legendFormat": "p99 µs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Anomaly count",
+      "description": "From ingero.anomaly.count (the agent's correlator output).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ingero_anomaly_count[5m]))",
+          "legendFormat": "anomalies/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "p50 duration per operation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_cuda_operation_duration_microseconds{percentile=\"p50\",source=~\"$source\",operation=~\"$operation\"})",
+          "legendFormat": "{{source}}/{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 duration per operation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_cuda_operation_duration_microseconds{percentile=\"p95\",source=~\"$source\",operation=~\"$operation\"})",
+          "legendFormat": "{{source}}/{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "p99 duration per operation",
+      "description": "Tail latency. Spikes here surface kernels that occasionally take much longer than their median (often hardware contention or compiler-output divergence).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_cuda_operation_duration_microseconds{percentile=\"p99\",source=~\"$source\",operation=~\"$operation\"})",
+          "legendFormat": "{{source}}/{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Op rate per operation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (source, operation) (rate(gpu_cuda_operation_count_total{source=~\"$source\",operation=~\"$operation\"}[1m])))",
+          "legendFormat": "{{source}}/{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top 10 slowest ops by p99 (current)",
+      "description": "Quick triage table. Click a row to filter the time-series above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_cuda_operation_duration_microseconds{percentile=\"p99\",source=~\"$source\",operation=~\"$operation\"})",
+          "legendFormat": "{{source}}/{{operation}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "percentile": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "µs"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "text",
+      "title": "Decoder",
+      "options": {
+        "mode": "markdown",
+        "content": "**Sources** (label `source`):\n\n- `cuda` - libcudart Runtime API uprobes (cudaMemcpy, cudaMalloc, cudaLaunchKernel, etc.)\n- `driver` - libcuda Driver API uprobes (cuLaunchKernel, cuCtxSynchronize, cuMemAlloc_v2, etc.)\n- `cuda_graph` - CUDA Graph capture/launch ops\n- `host` - host kernel tracepoints (sched_switch, page_fault, etc.)\n- `io` - block I/O tracepoints (block_rq_issue/complete)\n- `tcp` - TCP retransmit tracepoints\n- `net` - network socket syscalls (sendto/recvfrom)\n\n**Percentiles** (label `percentile`): `p50`, `p95`, `p99` over the agent's per-op latency reservoir."
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 6
+      }
+    }
+  ],
+  "refresh": "10s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "nvidia",
+    "gpu",
+    "cuda",
+    "profiler",
+    "kernel",
+    "latency",
+    "ebpf",
+    "pytorch",
+    "single-node",
+    "ingero"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_cuda_operation_count_total, source)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "label": "Source"
+      },
+      {
+        "name": "operation",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_cuda_operation_count_total{source=~\"$source\"}, operation)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "label": "Operation"
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "CUDA Op Profiler: per-op latency p50/p95/p99 (single host, eBPF)",
+  "uid": "ingero-single-node-cuda-perf",
+  "version": 1,
+  "weekStart": ""
+}

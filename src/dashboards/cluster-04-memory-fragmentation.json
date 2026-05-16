@@ -1,0 +1,432 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Multi-node NVIDIA GPU memory fragmentation dashboard. Per-GPU used/free/total, fragmentation estimate (heuristic), top processes by allocation, IOCTL event volume per cmd code (experimental kprobe on nvidia_unlocked_ioctl). For OOM-on-half-full-GPU debugging across the cluster.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Avg fragmentation estimate",
+      "description": "Average across selected GPUs. v0.14 heuristic: 1 - (largest free block / total free). 0 = unfragmented, 1 = fully fragmented.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "avg(gpu_memory_fragmentation_estimate{instance=~\"$instance\"})",
+          "legendFormat": "fragmentation"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 0.6
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "IOCTL events / sec (experimental)",
+      "description": "Sum of gpu_memfrag_ioctl_event_total rate across cmd codes. Only emits when agent runs --enable-experimental-kprobes on an allowlisted host.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gpu_memfrag_ioctl_event_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "events/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Distinct cmd codes",
+      "description": "Count of distinct nvidia_unlocked_ioctl cmd values seen in the window. Higher = more diverse memory ops (alloc/free/sync/etc).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (cmd) (gpu_memfrag_ioctl_event_total{instance=~\"$instance\"}))",
+          "legendFormat": "cmds"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Processes holding GPU memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "count(group by (instance, gpu_uuid, pid) (gpu_memory_process_allocated_bytes{instance=~\"$instance\"}))",
+          "legendFormat": "PIDs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Free memory per GPU",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_memory_free_bytes{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}} / {{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fragmentation estimate per GPU",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "gpu_memory_fragmentation_estimate{instance=~\"$instance\"}",
+          "legendFormat": "{{instance}} / {{gpu_uuid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "IOCTL event rate by cmd (top 10)",
+      "description": "K. Decode cmd values against open-gpu-kernel-modules nv-ioctl-numbers.h / nvos.h for what each is.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (cmd) (rate(gpu_memfrag_ioctl_event_total{instance=~\"$instance\"}[5m])))",
+          "legendFormat": "cmd={{cmd}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top 10 processes by allocated memory",
+      "description": "From gpu_memory_process_allocated_bytes (v0.14 nvidia-smi --query-compute-apps polled).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, gpu_memory_process_allocated_bytes{instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} pid={{pid}} gpu={{gpu_uuid}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "text",
+      "title": "How to read this dashboard",
+      "options": {
+        "mode": "markdown",
+        "content": "**Production gauges (v0.14):** `gpu_memory_*` are populated by the NVML poll. The fragmentation estimate is heuristic-based; high values (>0.5) signal alloc churn but the metric is bounded by the poll interval (default 10s).\n\n**Experimental counters:** `gpu_memfrag_ioctl_event_total{cmd}` only flows when the agent is started with `--enable-experimental-kprobes` AND the host is on `internal/kprobe.DefaultAllowlist`. Counter increments per `nvidia_unlocked_ioctl` invocation; `cmd` is the raw IOCTL command number. Decode against [open-gpu-kernel-modules nv-ioctl-numbers.h](https://github.com/NVIDIA/open-gpu-kernel-modules/blob/main/kernel-open/common/inc/nv-ioctl-numbers.h) and `nvos.h`.\n\n**Empty experimental panels = expected** when the flag is off cluster-wide or the driver/kernel pair is off the allowlist. Operators add new pairs after a real-hardware run validates the kprobes attach + fire."
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "id": 200,
+      "type": "table",
+      "title": "Memory fragmentation hotspots (MCP: fleet.cluster.memfrag_hotspots)",
+      "description": "Top fragmentation hotspots across the cluster. Complements the gpu_memfrag_estimate Prometheus panels above with per-PID detail when an Ingero datasource is configured.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "ingero-gpu-datasource",
+        "uid": "${ingero_source}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ingero-gpu-datasource",
+            "uid": "${ingero_source}"
+          },
+          "queryType": "tool",
+          "tool": "fleet.cluster.memfrag_hotspots",
+          "toolArgs": {}
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "30s",
+  "revision": 1,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "nvidia",
+    "gpu",
+    "memory",
+    "fragmentation",
+    "oom",
+    "ebpf",
+    "kprobe",
+    "ioctl",
+    "multi-node",
+    "ingero"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(gpu_memory_total_bytes, instance)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "ingero_source",
+        "type": "datasource",
+        "label": "Ingero",
+        "description": "Pick which Ingero datasource (Echo endpoint) to query.",
+        "query": "ingero-gpu-datasource",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "options": [],
+        "regex": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "GPU Memory Fragmentation: OOM on half-full GPU debug (multi-node)",
+  "uid": "ingero-cluster-memfrag",
+  "version": 1,
+  "weekStart": ""
+}
