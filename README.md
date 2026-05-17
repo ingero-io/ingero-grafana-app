@@ -26,7 +26,7 @@ Apache-2.0.
   4 single-host dashboards (trace overview, CUDA op profiler, data
   movement, memory throttle), 1 fleet pipeline-health operator
   dashboard, and 1 SQL reference dashboard.
-- **5 starter alert rules** (all pure-Prometheus in v0.1.0):
+- **5 starter alert rules** (all pure-Prometheus queries):
   - NCCL straggler suspected (cluster only)
   - GPU OOM imminent
   - GPU throttle sustained
@@ -36,8 +36,8 @@ Apache-2.0.
 ## Architecture
 
 The plugin connects to **Ingero Echo only**. Direct connections to
-agents are not supported. Operators running a single-node deployment
-install Ingero Fleet's Echo component in standalone mode; the agent
+[agents](https://github.com/ingero-io/ingero) are not supported. Operators running a single-node deployment
+install [Ingero Fleet](https://github.com/ingero-io/ingero-fleet)'s Echo component in standalone mode; the agent
 remains the eBPF data producer, Echo remains the queryable surface.
 
 The plugin's Go backend mediates every Echo request: bearer storage

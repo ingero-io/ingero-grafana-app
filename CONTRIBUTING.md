@@ -96,10 +96,10 @@ The pull-request template captures the per-PR gates:
 ## Architecture decisions of record
 
 - **Plugin connects to Ingero Echo only.** Direct connections to
-  Ingero agents are not supported. Reasoning: smaller attack
+  [Ingero agents](https://github.com/ingero-io/ingero) are not supported. Reasoning: smaller attack
   surface, single auth + ACL surface, single audit log. See
   README "Architecture" section.
-- **All three v0.1.0 query types route through the Go backend.**
+- **All three query types route through the Go backend.**
   The frontend never talks to Echo directly; bearer stays in the
   Grafana secure store and reaches Echo through the plugin's Go
   http.Client.
@@ -114,7 +114,7 @@ The pull-request template captures the per-PR gates:
 GitHub issues on this repo. Include:
 - Plugin version (in Grafana, Plugins → Ingero → Version).
 - Grafana version + edition.
-- Ingero Fleet / Echo version (from `GET /api/versions` on your
+- [Ingero Fleet](https://github.com/ingero-io/ingero-fleet) / Echo version (from `GET /api/versions` on your
   Echo endpoint, or the `Echo <version> is reachable` text in
   the datasource Save & test result).
 - Steps to reproduce. If a panel is rendering wrong, the panel's

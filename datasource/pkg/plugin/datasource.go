@@ -138,11 +138,11 @@ func (d *Datasource) Dispose() {}
 // holds, (c) shape responses for the frontend without exposing the
 // Echo wire format directly.
 //
-// Routes (v0.1.0):
+// Routes:
 //
-//	GET /tools  →  cached tools/list (filtered per the calling bearer
-//	              filtered per the calling bearer). Cache TTL:
-//	              5 minutes; cache key is the bearer hash.
+//	GET /tools  →  cached tools/list, filtered per the calling
+//	              bearer. Cache TTL: 5 minutes; cache key is the
+//	              bearer hash.
 //
 // Any other path returns 404.
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {

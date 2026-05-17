@@ -25,7 +25,7 @@ export interface IngeroSecureJsonData {
 }
 
 /**
- * Three query types supported by v0.1.0 of the datasource. The
+ * Three query types supported by the datasource. The
  * backend dispatcher branches on `queryType`. An empty `queryType`
  * with a non-empty `sql` is treated as a legacy SQL query (for
  * panels that predate the discriminator).

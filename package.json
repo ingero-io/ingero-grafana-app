@@ -1,6 +1,6 @@
 {
   "name": "ingero-gpu-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Grafana app + datasource plugin for Ingero GPU observability",
   "repository": {
     "type": "git",

@@ -6,7 +6,7 @@
       "type": "datasource",
       "id": "ingero-gpu-datasource",
       "name": "Ingero",
-      "version": "0.1.0"
+      "version": "1.0.0"
     },
     {
       "type": "grafana",

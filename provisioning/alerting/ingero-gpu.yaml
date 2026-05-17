@@ -4,7 +4,7 @@ apiVersion: 1
 # with the UID of your Prometheus datasource (the one scraping the
 # Ingero agent's :9090 endpoint, and for the cluster-only rules, the
 # fleet/Echo collector's :9090). All five rules are pure Prometheus
-# queries in v0.1.0; MCP-tool-as-alerting-query is deferred to v0.2.
+# queries; the MCP-tool-as-alerting-query variant may follow later.
 groups:
   - orgId: 1
     name: ingero-gpu
