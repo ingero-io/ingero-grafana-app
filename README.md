@@ -161,4 +161,4 @@ structural invariants, compat matrix kept in sync on version bumps).
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](https://github.com/ingero-io/ingero-grafana-app/blob/main/LICENSE).

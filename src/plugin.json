@@ -42,6 +42,11 @@
       "addToNav": true
     },
     {
+      "type": "datasource",
+      "name": "Ingero GPU",
+      "path": "datasource/plugin.json"
+    },
+    {
       "type": "dashboard",
       "name": "GPU Trace Overview (single host)",
       "path": "dashboards/single-node-01-trace-overview.json"
