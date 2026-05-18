@@ -30,12 +30,12 @@ All bearer-required except `/api/versions`:
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/versions` | major.minor version only |
-| GET | `/api/v1/health` | bearer-required |
-| GET | `/api/v1/tools/list` | returns the 2 scripted tools |
-| GET | `/api/v1/whoami` | returns scripted bearer_id |
-| GET | `/api/v1/openapi.json` | minimal OpenAPI 3.1 doc |
-| POST | `/api/v1/sql` | 2-row scripted result |
-| POST | `/api/v1/tools/<name>` | only `fleet.cluster.summary` + `fleet.cluster.anomaly_list` are scripted; everything else returns 404 |
+| GET | `/api/v2/health` | bearer-required |
+| GET | `/api/v2/tools/list` | returns the 2 scripted tools |
+| GET | `/api/v2/whoami` | returns scripted bearer_id |
+| GET | `/api/v2/openapi.json` | minimal OpenAPI 3.1 doc |
+| POST | `/api/v2/sql` | 2-row scripted result |
+| POST | `/api/v2/tools/<name>` | only `fleet.cluster.summary` + `fleet.cluster.anomaly_list` are scripted; everything else returns 404 |
 
 Every response body carries an `_echo_label` field so tests can
 assert which fake-Echo answered.
@@ -46,7 +46,7 @@ header so the plugin's req_id error-correlation path is exercised.
 ## Request log shape
 
 ```
-{"time":"2026-05-14T20:00:00Z","method":"POST","path":"/api/v1/tools/fleet.cluster.summary","bearer_present":true,"label":"echo-a","status":200}
+{"time":"2026-05-14T20:00:00Z","method":"POST","path":"/api/v2/tools/fleet.cluster.summary","bearer_present":true,"label":"echo-a","status":200}
 ```
 
 One JSONL record per HTTP request, appended to the file passed via

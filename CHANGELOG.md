@@ -26,9 +26,9 @@ First release.
 ### Datasource plugin (`ingero-gpu-datasource`)
 
 - Connects to Ingero Echo's HTTP+JSON API. Three query types:
-  - **SQL** against Echo's DuckDB store (`POST /api/v1/sql`).
-  - **MCP tool** invocation (`POST /api/v1/tools/<name>`), with the
-    tool catalog discovered from `/api/v1/tools/list`.
+  - **SQL** against Echo's DuckDB store (`POST /api/v2/sql`).
+  - **MCP tool** invocation (`POST /api/v2/tools/<name>`), with the
+    tool catalog discovered from `/api/v2/tools/list`.
   - **Anomaly stream** via the `fleet.cluster.anomaly_list` tool,
     with structured time-window / severity / limit / cluster filters.
 - Query editor with a per-type form. The tool picker is populated

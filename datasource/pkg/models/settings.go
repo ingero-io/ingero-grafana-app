@@ -10,7 +10,7 @@ import (
 // PluginSettings is the user-facing datasource configuration.
 //
 //   - Endpoint: the base URL of the Echo HTTP API, e.g. "https://echo.internal:8081".
-//     Must NOT include "/api/v1"; the backend appends paths.
+//     Must NOT include "/api/v2"; the backend appends paths.
 //   - InsecureSkipVerify: if true, the backend skips TLS certificate
 //     verification on outbound requests. Intended only for local /
 //     self-signed development; production datasources must leave it

@@ -129,7 +129,7 @@ func (s *server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// /api/v1/health (bearer-required).
+// /api/v2/health (bearer-required).
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
 		return
@@ -141,7 +141,7 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// /api/v1/tools/list (bearer-required, ACL-filtered in real Echo; we
+// /api/v2/tools/list (bearer-required, ACL-filtered in real Echo; we
 // always return the full set since we don't model tenant scopes).
 func (s *server) handleToolsList(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
@@ -182,7 +182,7 @@ func (s *server) handleToolsList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// /api/v1/whoami (bearer-required).
+// /api/v2/whoami (bearer-required).
 func (s *server) handleWhoami(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
 		return
@@ -199,7 +199,7 @@ func (s *server) handleWhoami(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// /api/v1/openapi.json (bearer-required).
+// /api/v2/openapi.json (bearer-required).
 func (s *server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
 		return
@@ -215,7 +215,7 @@ func (s *server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /api/v1/sql (bearer-required).
+// POST /api/v2/sql (bearer-required).
 func (s *server) handleSQL(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
 		return
@@ -234,7 +234,7 @@ func (s *server) handleSQL(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /api/v1/tools/<name> (bearer-required).
+// POST /api/v2/tools/<name> (bearer-required).
 func (s *server) handleTool(w http.ResponseWriter, r *http.Request) {
 	if !s.requireBearer(w, r) {
 		return
@@ -246,7 +246,7 @@ func (s *server) handleTool(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	name := strings.TrimPrefix(r.URL.Path, "/api/v1/tools/")
+	name := strings.TrimPrefix(r.URL.Path, "/api/v2/tools/")
 	if name == "" {
 		s.write(w, r, http.StatusBadRequest, map[string]any{
 			"error":       "tool name missing",
@@ -292,12 +292,12 @@ func (s *server) handleTool(w http.ResponseWriter, r *http.Request) {
 func (s *server) muxRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/versions", s.handleVersions)
-	mux.HandleFunc("/api/v1/health", s.handleHealth)
-	mux.HandleFunc("/api/v1/tools/list", s.handleToolsList)
-	mux.HandleFunc("/api/v1/whoami", s.handleWhoami)
-	mux.HandleFunc("/api/v1/openapi.json", s.handleOpenAPI)
-	mux.HandleFunc("/api/v1/sql", s.handleSQL)
-	mux.HandleFunc("/api/v1/tools/", s.handleTool)
+	mux.HandleFunc("/api/v2/health", s.handleHealth)
+	mux.HandleFunc("/api/v2/tools/list", s.handleToolsList)
+	mux.HandleFunc("/api/v2/whoami", s.handleWhoami)
+	mux.HandleFunc("/api/v2/openapi.json", s.handleOpenAPI)
+	mux.HandleFunc("/api/v2/sql", s.handleSQL)
+	mux.HandleFunc("/api/v2/tools/", s.handleTool)
 	return mux
 }
 

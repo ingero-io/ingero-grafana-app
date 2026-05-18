@@ -6,7 +6,7 @@ import { DataQuery } from '@grafana/schema';
  * struct (datasource/pkg/models/settings.go).
  */
 export interface IngeroDataSourceOptions extends DataSourceJsonData {
-  /** Base URL of the Echo HTTP API, e.g. "https://echo.internal:8081". Must NOT include /api/v1. */
+  /** Base URL of the Echo HTTP API, e.g. "https://echo.internal:8081". Must NOT include /api/v2. */
   endpoint?: string;
   /**
    * If true, skip TLS certificate verification on outbound requests.
@@ -70,7 +70,7 @@ export const DEFAULT_QUERY: Partial<IngeroQuery> = {
 
 /**
  * Tool descriptor returned by the backend's resource endpoint
- * `/resources/tools`, which caches Echo's /api/v1/tools/list
+ * `/resources/tools`, which caches Echo's /api/v2/tools/list
  * filtered for the calling bearer. Input/output schemas are passed
  * through raw.
  */

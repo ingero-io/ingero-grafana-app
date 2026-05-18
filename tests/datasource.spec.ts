@@ -27,7 +27,7 @@ const ECHO_ENDPOINT = 'http://fake-echo-a:8081';
 // Open a Grafana Select via its data-testid wrapper and click the
 // named option. Grafana's Select renders each option's title +
 // description into a single ARIA accessible name (e.g.
-//   "SQL\nRun a read-only DuckDB query against Echo via POST /api/v1/sql."
+//   "SQL\nRun a read-only DuckDB query against Echo via POST /api/v2/sql."
 // ), so exact: true on just the title never matches. Substring
 // match works because every QUERY_TYPES title prefix is unique.
 async function pickOption(page: Page, testId: string, label: string) {

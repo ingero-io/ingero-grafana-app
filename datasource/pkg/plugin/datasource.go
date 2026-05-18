@@ -1,6 +1,6 @@
 // Package plugin is the Ingero Grafana datasource backend. It
 // adapts the Grafana plugin SDK's Datasource interface onto the
-// Ingero Echo HTTP+JSON API at /api/v1/.
+// Ingero Echo HTTP+JSON API at /api/v2/.
 //
 // Architecture:
 //
@@ -13,8 +13,8 @@
 //     chain.
 //   - Auth: bearer token in the Authorization header, sourced from
 //     Grafana's secure store (never the unencrypted JSONData).
-//   - Three query types: SQL (POST /api/v1/sql), MCP tool dispatch
-//     (POST /api/v1/tools/<name>), and an anomaly stream. Each
+//   - Three query types: SQL (POST /api/v2/sql), MCP tool dispatch
+//     (POST /api/v2/tools/<name>), and an anomaly stream. Each
 //     converts the response to a data.Frame.
 package plugin
 
@@ -44,7 +44,7 @@ var (
 	_ instancemgmt.InstanceDisposer = (*Datasource)(nil)
 )
 
-// toolsListTTL is the cache lifetime for /api/v1/tools/list
+// toolsListTTL is the cache lifetime for /api/v2/tools/list
 // responses. 5 minutes is short enough that a server-side tool
 // registration shows up promptly, long enough that a busy dashboard
 // editor doesn't hammer Echo on every panel-form open.
@@ -55,7 +55,7 @@ const toolsListTTL = 5 * time.Minute
 // DataSourceInstanceSettings revision; the Grafana plugin SDK
 // disposes the previous instance when settings change.
 //
-// tools is a per-instance cache of GET /api/v1/tools/list. It is
+// tools is a per-instance cache of GET /api/v2/tools/list. It is
 // keyed defensively on a SHA-256 hash of the configured bearer
 // (truncated 16 bytes / 32 hex chars): the SDK normally builds a
 // fresh Datasource on settings revision changes, but the bearer-
@@ -67,7 +67,7 @@ type Datasource struct {
 	tools    toolsCache
 }
 
-// toolsCache is an in-memory TTL cache for /api/v1/tools/list. Only
+// toolsCache is an in-memory TTL cache for /api/v2/tools/list. Only
 // the calling bearer's filtered list is cached; the bearer hash is
 // the cache key (see Datasource doc).
 type toolsCache struct {
@@ -273,7 +273,7 @@ var (
 )
 
 // QueryData implements backend.QueryDataHandler. Iterates the
-// queries and forwards each SQL query to Echo's /api/v1/sql.
+// queries and forwards each SQL query to Echo's /api/v2/sql.
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	response := backend.NewQueryDataResponse()
 	for _, q := range req.Queries {
@@ -397,7 +397,7 @@ func withReqID(msg, reqID string) string {
 
 // CheckHealth implements the test-connection probe Grafana fires
 // when the user clicks "Save & test" on the datasource config
-// page. Calls /api/v1/health with the bearer; reports success or
+// page. Calls /api/v2/health with the bearer; reports success or
 // the upstream error verbatim.
 func (d *Datasource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	if d.settings == nil || d.client == nil {

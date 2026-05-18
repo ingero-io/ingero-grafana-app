@@ -75,7 +75,7 @@ const AppConfig = ({ plugin }: AppConfigProps) => {
       return;
     }
     setState({ ...state, testStatus: 'pending', testMessage: '' });
-    const url = `${state.echoEndpoint.replace(/\/$/, '')}/api/v1/health`;
+    const url = `${state.echoEndpoint.replace(/\/$/, '')}/api/v2/health`;
     try {
       const response = await lastValueFrom(
         getBackendSrv().fetch<{ status?: string }>({

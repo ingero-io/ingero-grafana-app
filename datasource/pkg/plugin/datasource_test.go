@@ -71,7 +71,7 @@ func TestCheckHealth_EmptyBearer(t *testing.T) {
 
 func TestCheckHealth_Success(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/health" {
+		if r.URL.Path != "/api/v2/health" {
 			t.Errorf("unexpected path %q", r.URL.Path)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer secret-token" {
@@ -124,7 +124,7 @@ func TestCheckHealth_401(t *testing.T) {
 
 func TestQueryData_SQL_Success(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/sql" {
+		if r.URL.Path != "/api/v2/sql" {
 			t.Errorf("unexpected path %q", r.URL.Path)
 		}
 		if r.Method != http.MethodPost {
@@ -315,8 +315,8 @@ func TestQuery_BackwardCompatSQL(t *testing.T) {
 	// still hit the SQL path. echo-sql-reference's panels predate
 	// the discriminator.
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/sql" {
-			t.Errorf("path = %q, want /api/v1/sql", r.URL.Path)
+		if r.URL.Path != "/api/v2/sql" {
+			t.Errorf("path = %q, want /api/v2/sql", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"columns":["n"],"rows":[[1]]}`))
@@ -335,8 +335,8 @@ func TestQuery_BackwardCompatSQL(t *testing.T) {
 
 func TestQuery_ToolHappyPath(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/tools/fleet.cluster.summary" {
-			t.Errorf("path = %q, want /api/v1/tools/fleet.cluster.summary", r.URL.Path)
+		if r.URL.Path != "/api/v2/tools/fleet.cluster.summary" {
+			t.Errorf("path = %q, want /api/v2/tools/fleet.cluster.summary", r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer tok" {
 			t.Errorf("missing bearer header: %q", r.Header.Get("Authorization"))
@@ -423,7 +423,7 @@ func TestQuery_ToolNameValidation(t *testing.T) {
 func TestQuery_AnomalyHappyPath(t *testing.T) {
 	var capturedBody []byte
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/tools/fleet.cluster.anomaly_list" {
+		if r.URL.Path != "/api/v2/tools/fleet.cluster.anomaly_list" {
 			t.Errorf("path = %q", r.URL.Path)
 		}
 		body, _ := io.ReadAll(r.Body)
@@ -569,8 +569,8 @@ func (c *captureSender) Send(r *backend.CallResourceResponse) error {
 func TestCallResource_ToolsHappyPath(t *testing.T) {
 	calls := 0
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/tools/list" {
-			t.Errorf("path = %q, want /api/v1/tools/list", r.URL.Path)
+		if r.URL.Path != "/api/v2/tools/list" {
+			t.Errorf("path = %q, want /api/v2/tools/list", r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer tok" {
 			t.Errorf("missing bearer; got %q", r.Header.Get("Authorization"))

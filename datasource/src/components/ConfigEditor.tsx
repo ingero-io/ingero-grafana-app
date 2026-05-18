@@ -49,7 +49,7 @@ export function ConfigEditor(props: Props) {
         label="Echo endpoint"
         labelWidth={20}
         interactive
-        tooltip="Base URL of the Echo HTTP API, e.g. https://echo.internal:8081. Do not include /api/v1; the backend appends paths."
+        tooltip="Base URL of the Echo HTTP API, e.g. https://echo.internal:8081. Do not include /api/v2; the backend appends paths."
       >
         <div data-testid="config-editor-endpoint">
           <Input

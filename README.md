@@ -15,9 +15,9 @@ Apache-2.0.
   auto-provisioned dashboards.
 - **Datasource sub-plugin (`ingero-gpu-datasource`)**: three query
   types against Ingero Echo's HTTP API:
-  - **SQL** via `POST /api/v1/sql` (Echo's DuckDB store; read-only,
+  - **SQL** via `POST /api/v2/sql` (Echo's DuckDB store; read-only,
     60s timeout, 1GB memory cap, no filesystem builtins)
-  - **MCP tool** via `POST /api/v1/tools/<name>` (server-validated
+  - **MCP tool** via `POST /api/v2/tools/<name>` (server-validated
     against each tool's JSON schema)
   - **Anomaly stream** via `fleet.cluster.anomaly_list` with
     structured filters (time_window, severity, limit, cluster_id)
@@ -48,7 +48,7 @@ Echo on every form open.
 
 ## Compatibility
 
-The plugin speaks the Ingero Echo HTTP API v1. On every datasource
+The plugin speaks the Ingero Echo HTTP API v2. On every datasource
 connection it negotiates against `/api/versions`, pins the API
 version for the session, and surfaces a clear error if the plugin
 and the Echo endpoint have no API version in common. The README's
@@ -83,7 +83,7 @@ In Grafana, **Connections → Add new connection → Ingero**.
 
 | Field | Value |
 |---|---|
-| **Echo endpoint** | Base URL of the Echo HTTP API, e.g. `https://echo.internal:8081`. Do not include `/api/v1`; the backend appends paths. |
+| **Echo endpoint** | Base URL of the Echo HTTP API, e.g. `https://echo.internal:8081`. Do not include `/api/v2`; the backend appends paths. |
 | **Bearer token** | Issued by your Echo operator. Stored in Grafana's secure store. |
 | **Skip TLS verify** | DEV ONLY. The backend refuses to honor this on non-loopback endpoints. |
 
@@ -113,7 +113,7 @@ collector's `:9090`).
 
 - **Bearer storage**: Grafana `secureJsonData`. Never read back to
   the frontend after save. Never logged. Plugin frontend uses
-  `/api/v1/whoami`'s `bearer_id` field for any "logged in as" UX,
+  `/api/v2/whoami`'s `bearer_id` field for any "logged in as" UX,
   never anything derived from the raw token.
 - **Bearer rotation**: on a mid-session 401 the plugin marks the
   datasource as terminal-unauthenticated until the operator
@@ -123,7 +123,7 @@ collector's `:9090`).
   `127.0.0.1` / `localhost` / `::1`. The backend refuses to honor it
   on routable addresses and logs a warning on every request when
   honored.
-- **Tools/list scoping**: Echo filters `/api/v1/tools/list` per the
+- **Tools/list scoping**: Echo filters `/api/v2/tools/list` per the
   calling bearer, so a tenant-scoped bearer sees a smaller tool set.
   The plugin caches the list per `(datasource instance, bearer
   hash)` so a bearer change cannot serve a stale list.

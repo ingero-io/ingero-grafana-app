@@ -7,8 +7,8 @@ import { IngeroDataSourceOptions, IngeroQuery, IngeroQueryType, ToolDescriptor }
 type Props = QueryEditorProps<DataSource, IngeroQuery, IngeroDataSourceOptions>;
 
 const QUERY_TYPES: Array<SelectableValue<IngeroQueryType>> = [
-  { label: 'SQL', value: 'sql', description: 'Run a read-only DuckDB query against Echo via POST /api/v1/sql.' },
-  { label: 'MCP tool', value: 'tool', description: 'Invoke a server-registered MCP tool via POST /api/v1/tools/<name>.' },
+  { label: 'SQL', value: 'sql', description: 'Run a read-only DuckDB query against Echo via POST /api/v2/sql.' },
+  { label: 'MCP tool', value: 'tool', description: 'Invoke a server-registered MCP tool via POST /api/v2/tools/<name>.' },
   { label: 'Anomaly stream', value: 'anomaly', description: 'Recent anomalies via fleet.cluster.anomaly_list.' },
 ];
 

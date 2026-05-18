@@ -13,7 +13,7 @@ import (
 )
 
 // echoClient is a minimal HTTP client for the Ingero Echo HTTP+JSON
-// API at /api/v1/...
+// API at /api/v2/...
 //
 // Built to be cheap: one shared transport with a 30s timeout, a
 // connection pool sized for the typical Grafana panel refresh
@@ -63,13 +63,13 @@ type versionsResponse struct {
 	Capabilities map[string]bool `json:"capabilities"`
 }
 
-// healthResponse mirrors the Echo /api/v1/health shape.
+// healthResponse mirrors the Echo /api/v2/health shape.
 type healthResponse struct {
 	Status  string `json:"status"`
 	Version string `json:"version,omitempty"`
 }
 
-// sqlRequest is the body shape POSTed to /api/v1/sql.
+// sqlRequest is the body shape POSTed to /api/v2/sql.
 type sqlRequest struct {
 	SQL string `json:"sql"`
 }
@@ -93,14 +93,14 @@ type toolDescriptor struct {
 	OutputSchema json.RawMessage `json:"output_schema,omitempty"`
 }
 
-// toolsListResponse mirrors Echo's GET /api/v1/tools/list body.
+// toolsListResponse mirrors Echo's GET /api/v2/tools/list body.
 // Tenant-scoped bearers see a filtered subset; the plugin caches the
 // list as returned to the calling bearer (no cross-bearer pollution).
 type toolsListResponse struct {
 	Tools []toolDescriptor `json:"tools"`
 }
 
-// toolResponse mirrors POST /api/v1/tools/<name>. The Result field
+// toolResponse mirrors POST /api/v2/tools/<name>. The Result field
 // carries the tool's declared output shape; the plugin handles three
 // common cases when projecting it to a Grafana DataFrame:
 //   - result is an array of objects: each key becomes a column
@@ -146,11 +146,11 @@ func (c *echoClient) getVersions(ctx context.Context) (*versionsResponse, error)
 	return &v, nil
 }
 
-// getHealth issues GET /api/v1/health with the configured bearer.
+// getHealth issues GET /api/v2/health with the configured bearer.
 // Returns the parsed body and the X-Request-Id header value for
 // diagnostic surface in CheckHealth messages.
 func (c *echoClient) getHealth(ctx context.Context) (*healthResponse, string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/v1/health", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/v2/health", nil)
 	if err != nil {
 		return nil, "", err
 	}
@@ -173,7 +173,7 @@ func (c *echoClient) getHealth(ctx context.Context) (*healthResponse, string, er
 	return &h, reqID, nil
 }
 
-// postSQL issues POST /api/v1/sql with the configured bearer. On
+// postSQL issues POST /api/v2/sql with the configured bearer. On
 // non-200 responses, tries to decode an echoError and surfaces it
 // via the returned error; on transport errors, returns the wrapped
 // error.
@@ -183,7 +183,7 @@ func (c *echoClient) postSQL(ctx context.Context, sql string) (*sqlResponse, str
 		return nil, "", err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.base+"/api/v1/sql", bytes.NewReader(body))
+		c.base+"/api/v2/sql", bytes.NewReader(body))
 	if err != nil {
 		return nil, "", err
 	}
@@ -216,14 +216,14 @@ func (c *echoClient) postSQL(ctx context.Context, sql string) (*sqlResponse, str
 	return &s, reqID, nil
 }
 
-// getToolsList issues GET /api/v1/tools/list with the configured
+// getToolsList issues GET /api/v2/tools/list with the configured
 // bearer. The server filters the response per the calling bearer,
 // so the plugin caches the result under that bearer's hash: a
 // tenant-scoped instance's cache never carries tools that a
 // wider-scoped bearer would see, and vice versa.
 func (c *echoClient) getToolsList(ctx context.Context) ([]toolDescriptor, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		c.base+"/api/v1/tools/list", nil)
+		c.base+"/api/v2/tools/list", nil)
 	if err != nil {
 		return nil, "", err
 	}
@@ -253,7 +253,7 @@ func (c *echoClient) getToolsList(ctx context.Context) ([]toolDescriptor, string
 	return body.Tools, reqID, nil
 }
 
-// postTool issues POST /api/v1/tools/<name> with the configured
+// postTool issues POST /api/v2/tools/<name> with the configured
 // bearer. Tool name is path-segment-escaped: callers pass the dotted
 // name (fleet.cluster.summary) as-is. The args body is forwarded
 // verbatim as the request body's `args` field. On non-200 responses
@@ -274,7 +274,7 @@ func (c *echoClient) postTool(ctx context.Context, name string, args json.RawMes
 		return nil, "", err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.base+"/api/v1/tools/"+name, bytes.NewReader(envelope))
+		c.base+"/api/v2/tools/"+name, bytes.NewReader(envelope))
 	if err != nil {
 		return nil, "", err
 	}
