@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format
 is loosely based on [Keep a Changelog](https://keepachangelog.com/);
 the project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.1]
+
+### Fixed
+
+- Datasource targets Echo API v2. Echo removed `/api/v1` in Fleet
+  1.0 (HTTP 410 Gone); the datasource backend, settings, query
+  editor, docs, and the bundled fake-echo test server now use
+  `/api/v2`.
+
 ## [1.0.0]
 
 First release.
@@ -26,9 +35,9 @@ First release.
 ### Datasource plugin (`ingero-gpu-datasource`)
 
 - Connects to Ingero Echo's HTTP+JSON API. Three query types:
-  - **SQL** against Echo's DuckDB store (`POST /api/v2/sql`).
-  - **MCP tool** invocation (`POST /api/v2/tools/<name>`), with the
-    tool catalog discovered from `/api/v2/tools/list`.
+  - **SQL** against Echo's DuckDB store (`POST /api/v1/sql`).
+  - **MCP tool** invocation (`POST /api/v1/tools/<name>`), with the
+    tool catalog discovered from `/api/v1/tools/list`.
   - **Anomaly stream** via the `fleet.cluster.anomaly_list` tool,
     with structured time-window / severity / limit / cluster filters.
 - Query editor with a per-type form. The tool picker is populated
