@@ -126,8 +126,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: datasource/go.mod
-          cache-dependency-path: datasource/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
       - name: Download modules
         run: cd datasource && go mod download
       - name: Vet
@@ -220,8 +220,8 @@ jobs:
         if: steps.check-for-backend.outputs.has-backend == 'true'
         uses: actions/setup-go@v6
         with:
-          go-version-file: datasource/go.mod
-          cache-dependency-path: datasource/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Build backend binaries (gpx_<plugin-id>_<os>_<arch>)
         if: steps.check-for-backend.outputs.has-backend == 'true'

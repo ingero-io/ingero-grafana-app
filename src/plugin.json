@@ -28,7 +28,24 @@
         "url": "https://github.com/ingero-io/ingero-fleet"
       }
     ],
-    "screenshots": [],
+    "screenshots": [
+      {
+        "name": "NCCL straggler detection",
+        "path": "img/screenshot-nccl-stragglers.png"
+      },
+      {
+        "name": "GPU cluster overview",
+        "path": "img/screenshot-cluster-overview.png"
+      },
+      {
+        "name": "Single-host GPU trace overview",
+        "path": "img/screenshot-gpu-trace-overview.png"
+      },
+      {
+        "name": "CUDA op profiler",
+        "path": "img/screenshot-cuda-op-profiler.png"
+      }
+    ],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },

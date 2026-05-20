@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format
 is loosely based on [Keep a Changelog](https://keepachangelog.com/);
 the project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.2]
+
+### Fixed
+
+- Plugin catalog packaging: the Go backend module is now rooted at
+  the repo root so the Grafana plugin validator's `go-mod-not-found`
+  check passes. With `go.mod` previously under `datasource/`, the
+  v1.0.1 submission was rejected. Source layout and package import
+  paths are unchanged.
+
+### Added
+
+- Four catalog screenshots in `info.screenshots` (cluster overview,
+  NCCL straggler detection, single-host trace overview, CUDA op
+  profiler), clearing the validator's `screenshots` warning.
+
 ## [1.0.1]
 
 ### Fixed
