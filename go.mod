@@ -1,4 +1,4 @@
-module github.com/ingero-io/ingero-grafana-app/datasource
+module github.com/ingero-io/ingero-grafana-app
 
 go 1.25.7
 
